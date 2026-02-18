@@ -1,5 +1,7 @@
 # koko
 
+[![CI](https://github.com/rbright/koko/actions/workflows/ci.yml/badge.svg)](https://github.com/rbright/koko/actions/workflows/ci.yml)
+
 Local CLI text-to-speech using [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) for on-demand inference.
 
 - No daemon/background service.
