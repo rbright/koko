@@ -1,0 +1,7 @@
+# Normalize line endings for all text files
+* text=auto eol=lf
+
+# Keep common ML/audio artifacts binary if they are ever added
+*.pt binary
+*.pth binary
+*.wav binary

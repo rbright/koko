@@ -1,0 +1,63 @@
+set shell := ["bash", "-eu", "-o", "pipefail", "-c"]
+set positional-arguments
+
+tooling_flake := "path:."
+
+default:
+    @just --list
+
+# Install/update project dependencies.
+deps:
+    uv sync --dev
+
+# Format Python code.
+fmt:
+    uv run ruff format .
+
+# Format tracked Nix files.
+fmt-nix:
+    nix develop '{{ tooling_flake }}' -c bash -euo pipefail -c 'mapfile -t files < <(rg --files -g "*.nix"); if [[ "${#files[@]}" -eq 0 ]]; then exit 0; fi; nixfmt "${files[@]}"'
+
+# Run lint checks.
+lint: lint-ruff lint-ty lint-nix
+    @echo "✅ lint passed"
+
+lint-ruff:
+    uv run ruff check .
+
+lint-ty:
+    uv run ty check .
+
+# Lint Nix configs (statix + deadnix + formatting check).
+lint-nix:
+    nix develop '{{ tooling_flake }}' -c statix check .
+    nix develop '{{ tooling_flake }}' -c bash -euo pipefail -c 'mapfile -t files < <(rg --files -g "*.nix"); if [[ "${#files[@]}" -eq 0 ]]; then exit 0; fi; deadnix --fail --no-underscore "${files[@]}"'
+    nix develop '{{ tooling_flake }}' -c bash -euo pipefail -c 'mapfile -t files < <(rg --files -g "*.nix"); if [[ "${#files[@]}" -eq 0 ]]; then exit 0; fi; nixfmt --check "${files[@]}"'
+
+# Run test suite.
+test:
+    uv run pytest
+
+# Full local gate.
+check: lint test
+    @echo "✅ check passed"
+
+# Install prek git hooks.
+precommit-install:
+    uv run prek install
+
+# Run prek hooks over all files.
+precommit-run:
+    uv run prek run --all-files
+
+# Run koko CLI with forwarded args.
+run *args:
+    uv run koko {{ args }}
+
+# Download Kokoro model assets for local/offline use.
+download-model model_dir="~/.local/share/koko/kokoro-82m" voices="all" repo_id="hexgrad/Kokoro-82M":
+    uv run koko-download-model --model-dir '{{ model_dir }}' --voices '{{ voices }}' --repo-id '{{ repo_id }}'
+
+# Smoke test with real inference (requires local model assets in offline mode).
+smoke-e2e model_dir="~/.local/share/koko/kokoro-82m" output="/tmp/koko-smoke.wav" text="Koko local inference smoke test":
+    uv run koko --model-dir '{{ model_dir }}' --no-play --output {{ output }} "{{ text }}"
