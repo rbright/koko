@@ -13,7 +13,6 @@ jobs:
     timeout-minutes: 120
     env:
       HF_HUB_DISABLE_TELEMETRY: "1"
-      KOKO_CI_MODEL_DIR: ${{ runner.temp }}/koko-model
 
     steps:
       - name: Checkout
@@ -52,6 +51,9 @@ jobs:
 
       - name: Test
         run: just test
+
+      - name: Set CI model directory
+        run: echo "KOKO_CI_MODEL_DIR=${RUNNER_TEMP}/koko-model" >> "$GITHUB_ENV"
 
       - name: Download local model assets
         run: just download-model "$KOKO_CI_MODEL_DIR" af_heart
