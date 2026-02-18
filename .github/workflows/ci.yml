@@ -13,6 +13,7 @@ jobs:
     timeout-minutes: 120
     env:
       HF_HUB_DISABLE_TELEMETRY: "1"
+      KOKO_CI_MODEL_DIR: ${{ runner.temp }}/koko-model
 
     steps:
       - name: Checkout
@@ -53,10 +54,17 @@ jobs:
         run: just test
 
       - name: Download local model assets
-        run: just download-model voices=af_heart
+        run: just download-model "$KOKO_CI_MODEL_DIR" af_heart
+
+      - name: Verify downloaded model assets
+        run: |
+          ls -la "$KOKO_CI_MODEL_DIR"
+          test -f "$KOKO_CI_MODEL_DIR/config.json"
+          test -f "$KOKO_CI_MODEL_DIR/kokoro-v1_0.pth"
+          test -f "$KOKO_CI_MODEL_DIR/voices/af_heart.pt"
 
       - name: Smoke E2E
-        run: just smoke-e2e
+        run: just smoke-e2e "$KOKO_CI_MODEL_DIR"
 
       - name: Nix build
         run: nix build 'path:.#koko'
