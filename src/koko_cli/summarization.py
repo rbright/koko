@@ -83,8 +83,13 @@ def truncate_summary_input(text: str, max_input_chars: int) -> str:
     if len(normalized) <= max_input_chars:
         return normalized
 
-    truncated = normalized[:max_input_chars].rstrip()
-    return f"{truncated}\n\n[Input truncated before summarization.]"
+    note = "\n\n[Input truncated before summarization.]"
+    budget = max_input_chars - len(note)
+    if budget <= 0:
+        return normalized[:max_input_chars].rstrip()
+
+    truncated = normalized[:budget].rstrip()
+    return f"{truncated}{note}"
 
 
 def normalize_summary_output(output: str) -> str:

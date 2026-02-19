@@ -29,11 +29,20 @@ def test_resolve_api_key_uses_local_sentinel_when_blank() -> None:
 
 
 def test_truncate_summary_input_limits_size() -> None:
+    raw = "x" * 256
+    result = summarization.truncate_summary_input(raw, max_input_chars=64)
+
+    assert len(result) <= 64
+    assert result.endswith("[Input truncated before summarization.]")
+
+
+def test_truncate_summary_input_omits_notice_when_cap_is_too_small() -> None:
     raw = "x" * 32
     result = summarization.truncate_summary_input(raw, max_input_chars=8)
 
-    assert result.startswith("x" * 8)
-    assert "Input truncated before summarization" in result
+    assert result == "x" * 8
+    assert len(result) <= 8
+    assert "Input truncated before summarization" not in result
 
 
 def test_normalize_summary_output_strips_markdown_artifacts() -> None:
