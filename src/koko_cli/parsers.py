@@ -9,7 +9,7 @@ from pydantic import ValidationError
 from .errors import UsageError
 from .models import SpeakCommand, VoicesCommand, format_validation_error
 from .settings import SettingsSnapshot
-from .text import positive_float, positive_int
+from .text import min_256_int, positive_float
 
 
 def split_command(argv: Sequence[str]) -> tuple[str, list[str]]:
@@ -118,9 +118,9 @@ def parse_speak_args(argv: Sequence[str], settings: SettingsSnapshot) -> argpars
     )
     parser.add_argument(
         "--llm-max-input-chars",
-        type=positive_int,
+        type=min_256_int,
         default=settings.llm_max_input_chars,
-        help="Maximum input characters sent to summarization model (>0).",
+        help="Maximum input characters sent to summarization model (min: 256).",
     )
     parser.add_argument(
         "--repo-id",

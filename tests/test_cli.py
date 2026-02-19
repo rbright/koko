@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import os
 import wave
 from pathlib import Path
@@ -72,6 +73,13 @@ def test_resolve_text_rejects_conflicting_sources(tmp_path: Path) -> None:
 
     with pytest.raises(UsageError, match="either message args or --input-file"):
         text.resolve_text(message_parts=["hello"], input_file=str(source_path))
+
+
+def test_min_256_int_validator() -> None:
+    assert text.min_256_int("256") == 256
+
+    with pytest.raises(argparse.ArgumentTypeError, match=">= 256"):
+        text.min_256_int("255")
 
 
 def test_configure_offline_environment_sets_offline_flags() -> None:
@@ -275,6 +283,7 @@ def test_offline_summarize_requires_local_llm_base_url(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     monkeypatch.setattr(cli, "load_settings", lambda: make_settings(default_model_dir=tmp_path / "missing-model-dir"))
+    output_path = tmp_path / "koko-offline-summary.wav"
 
     exit_code = cli.main(
         [
@@ -283,7 +292,7 @@ def test_offline_summarize_requires_local_llm_base_url(
             "https://api.example.com/v1",
             "--no-play",
             "--output",
-            "/tmp/koko-offline-summary.wav",
+            str(output_path),
             "hello",
         ]
     )

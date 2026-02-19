@@ -17,6 +17,8 @@ def test_is_local_llm_base_url_detects_loopback() -> None:
     assert summarization.is_local_llm_base_url("http://127.0.0.1:11434/v1")
     assert summarization.is_local_llm_base_url("http://localhost:11434/v1")
     assert summarization.is_local_llm_base_url("127.0.0.1:11434/v1")
+    assert summarization.is_local_llm_base_url("http://0.0.0.0:11434/v1")
+    assert summarization.is_local_llm_base_url("http://[::1]:11434/v1")
     assert not summarization.is_local_llm_base_url("https://api.openai.com/v1")
 
 
@@ -51,7 +53,25 @@ def test_summarize_for_speech_returns_normalized_output(monkeypatch: pytest.Monk
         def run_sync(self, *args: object, **kwargs: object) -> FakeResult:
             return FakeResult()
 
-    monkeypatch.setattr(summarization, "Agent", FakeAgent)
+    class FakeModelSettings(dict):
+        def __init__(self, timeout: float) -> None:
+            super().__init__(timeout=timeout)
+
+    class FakeOpenAIChatModel:
+        def __init__(self, model_name: str, provider: object) -> None:
+            self.model_name = model_name
+            self.provider = provider
+
+    class FakeOpenAIProvider:
+        def __init__(self, base_url: str, api_key: str | None) -> None:
+            self.base_url = base_url
+            self.api_key = api_key
+
+    monkeypatch.setattr(
+        summarization,
+        "load_pydantic_ai_components",
+        lambda: (FakeAgent, FakeModelSettings, FakeOpenAIChatModel, FakeOpenAIProvider),
+    )
 
     result = summarization.summarize_for_speech(
         text="raw markdown input",
@@ -73,7 +93,25 @@ def test_summarize_for_speech_raises_when_model_call_fails(monkeypatch: pytest.M
         def run_sync(self, *args: object, **kwargs: object) -> str:
             raise RuntimeError("upstream error")
 
-    monkeypatch.setattr(summarization, "Agent", FakeAgent)
+    class FakeModelSettings(dict):
+        def __init__(self, timeout: float) -> None:
+            super().__init__(timeout=timeout)
+
+    class FakeOpenAIChatModel:
+        def __init__(self, model_name: str, provider: object) -> None:
+            self.model_name = model_name
+            self.provider = provider
+
+    class FakeOpenAIProvider:
+        def __init__(self, base_url: str, api_key: str | None) -> None:
+            self.base_url = base_url
+            self.api_key = api_key
+
+    monkeypatch.setattr(
+        summarization,
+        "load_pydantic_ai_components",
+        lambda: (FakeAgent, FakeModelSettings, FakeOpenAIChatModel, FakeOpenAIProvider),
+    )
 
     with pytest.raises(SummarizationError, match="Summarization request failed"):
         summarization.summarize_for_speech(

@@ -3,12 +3,8 @@ from __future__ import annotations
 import re
 from functools import lru_cache
 from importlib.resources import files
+from typing import Any
 from urllib.parse import urlparse
-
-from pydantic_ai import Agent
-from pydantic_ai.models import ModelSettings
-from pydantic_ai.models.openai import OpenAIChatModel
-from pydantic_ai.providers.openai import OpenAIProvider
 
 from .errors import SummarizationError
 
@@ -31,6 +27,23 @@ def load_summary_instructions() -> str:
     return normalized
 
 
+@lru_cache(maxsize=1)
+def load_pydantic_ai_components() -> tuple[type[Any], type[Any], type[Any], type[Any]]:
+    """Load pydantic-ai classes lazily so base CLI still works without summarize deps."""
+
+    try:
+        from pydantic_ai import Agent
+        from pydantic_ai.models import ModelSettings
+        from pydantic_ai.models.openai import OpenAIChatModel
+        from pydantic_ai.providers.openai import OpenAIProvider
+    except ImportError as error:
+        raise SummarizationError(
+            "Summarization requires the optional dependency 'pydantic-ai' in the runtime environment."
+        ) from error
+
+    return Agent, ModelSettings, OpenAIChatModel, OpenAIProvider
+
+
 def summarize_for_speech(
     *,
     text: str,
@@ -44,6 +57,8 @@ def summarize_for_speech(
 
     prepared_text = truncate_summary_input(text=text, max_input_chars=max_input_chars)
     resolved_api_key = resolve_api_key(base_url=base_url, api_key=api_key)
+
+    Agent, ModelSettings, OpenAIChatModel, OpenAIProvider = load_pydantic_ai_components()
 
     provider = OpenAIProvider(base_url=base_url, api_key=resolved_api_key)
     chat_model = OpenAIChatModel(model_name=model, provider=provider)
@@ -97,8 +112,8 @@ def is_local_llm_base_url(base_url: str) -> bool:
 
     parse_target = base_url if "://" in base_url else f"http://{base_url}"
     parsed = urlparse(parse_target)
-    hostname = (parsed.hostname or "").lower()
-    return hostname in {"127.0.0.1", "localhost", "::1"}
+    hostname = (parsed.hostname or "").strip("[]").lower()
+    return hostname in {"127.0.0.1", "localhost", "::1", "0.0.0.0"}
 
 
 def resolve_api_key(base_url: str, api_key: str) -> str | None:

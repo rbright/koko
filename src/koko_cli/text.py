@@ -27,6 +27,15 @@ def positive_int(value: str) -> int:
     return parsed
 
 
+def min_256_int(value: str) -> int:
+    """argparse validator for integer values >= 256."""
+
+    parsed = int(value)
+    if parsed < 256:
+        raise argparse.ArgumentTypeError("value must be >= 256")
+    return parsed
+
+
 def resolve_text(message_parts: Sequence[str], input_file: str | None) -> str:
     """Resolve input text from message args, file, or stdin."""
 
