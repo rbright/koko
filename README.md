@@ -124,7 +124,7 @@ koko "Task complete"
 - `--llm-model` — summarization model id (default: `mistralai_Mistral-Small-3.2-24B-Instruct-2506-Q6_K`)
 - `--llm-api-key` — optional API key for summarization endpoint
 - `--llm-timeout-seconds` — summarization request timeout (`> 0`)
-- `--llm-max-input-chars` — maximum input size sent to LLM (`> 0`)
+- `--llm-max-input-chars` — maximum input size sent to LLM (`>= 256`)
 - `--repo-id` — Hugging Face model repo (default: `hexgrad/Kokoro-82M`)
 - `--model-dir` — local model asset directory (`config.json`, `kokoro-v1_0.pth`, `voices/*.pt`)
 - `--offline/--no-offline` — local-only mode toggle (default: `--offline`)

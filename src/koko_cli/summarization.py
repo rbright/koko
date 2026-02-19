@@ -66,7 +66,7 @@ def summarize_for_speech(
 
     try:
         result = agent.run_sync(prepared_text, model_settings=ModelSettings(timeout=timeout_seconds))
-    except Exception as error:  # noqa: BLE001
+    except Exception as error:
         raise SummarizationError(f"Summarization request failed: {error}") from error
 
     summary = normalize_summary_output(result.output)
