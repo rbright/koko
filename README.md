@@ -174,6 +174,10 @@ just fmt-nix
 just lint
 just test
 just smoke-e2e
+just smoke-llm
+# optional local hook simulation:
+just precommit-run
+just prepush-run
 # or specify a custom asset path (positional args):
 just smoke-e2e /path/to/kokoro-82m /tmp/koko-smoke.wav "Koko local inference smoke test"
 ```

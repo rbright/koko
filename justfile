@@ -42,13 +42,17 @@ test:
 check: lint test
     @echo "✅ check passed"
 
-# Install prek git hooks.
+# Install prek git hooks (pre-commit + pre-push).
 precommit-install:
-    uv run prek install
+    uv run prek install --hook-type pre-commit --hook-type pre-push
 
-# Run prek hooks over all files.
+# Run prek hooks over all files for pre-commit stage.
 precommit-run:
-    uv run prek run --all-files
+    uv run prek run --all-files --hook-stage pre-commit
+
+# Run prek hooks over all files for pre-push stage.
+prepush-run:
+    uv run prek run --all-files --hook-stage pre-push
 
 # Run koko CLI with forwarded args.
 run *args:
