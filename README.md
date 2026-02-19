@@ -17,6 +17,7 @@ Local CLI text-to-speech using [Kokoro-82M](https://huggingface.co/hexgrad/Kokor
 - Message input from args, file, or stdin
 - WAV output via `--output`
 - Optional playback toggle via `--play/--no-play`
+- Optional `--summarize` pre-vocalization filter (OpenAI-compatible API; local llama.cpp friendly)
 
 ## Requirements
 
@@ -58,6 +59,9 @@ echo "Deployment completed." | koko
 
 # Read text from file
 koko --input-file ./message.txt
+
+# Summarize noisy structured text before speech (local llama.cpp)
+koko --summarize --llm-model mistralai_Mistral-Small-3.2-24B-Instruct-2506-Q6_K "### Build\n- ✅ tests pass\n- changed 14 files"
 
 # List voices
 koko voices
@@ -115,6 +119,12 @@ koko "Task complete"
 - `-f, --input-file` — input text file (`-` for stdin)
 - `--device` — `auto` (default), `cpu`, or `cuda`
 - `--play/--no-play` — enable or disable local playback
+- `--summarize/--no-summarize` — summarize input text before TTS (default: off)
+- `--llm-base-url` — OpenAI-compatible API URL (default: `http://127.0.0.1:11434/v1`)
+- `--llm-model` — summarization model id (default: `mistralai_Mistral-Small-3.2-24B-Instruct-2506-Q6_K`)
+- `--llm-api-key` — optional API key for summarization endpoint
+- `--llm-timeout-seconds` — summarization request timeout (`> 0`)
+- `--llm-max-input-chars` — maximum input size sent to LLM (`>= 256`)
 - `--repo-id` — Hugging Face model repo (default: `hexgrad/Kokoro-82M`)
 - `--model-dir` — local model asset directory (`config.json`, `kokoro-v1_0.pth`, `voices/*.pt`)
 - `--offline/--no-offline` — local-only mode toggle (default: `--offline`)
@@ -127,8 +137,22 @@ You can set defaults with `KOKO_*` environment variables:
 - `KOKO_DEFAULT_VOICE`
 - `KOKO_OFFLINE`
 - `KOKO_MODEL_DIR`
+- `KOKO_SUMMARIZE`
+- `KOKO_LLM_BASE_URL`
+- `KOKO_LLM_MODEL`
+- `KOKO_LLM_API_KEY`
+- `KOKO_LLM_TIMEOUT_SECONDS`
+- `KOKO_LLM_MAX_INPUT_CHARS`
 
 CLI flags still take precedence over environment defaults.
+
+When `--summarize` is enabled and summarization fails, `koko` logs an error and exits without generating or playing audio.
+
+### Summarization behavior
+
+- `--summarize` runs **before** Kokoro synthesis.
+- In offline mode, summarization requires a **local** `--llm-base-url` (for example `http://127.0.0.1:11434/v1`).
+- If summarization fails, `koko` exits non-zero and does not produce audio (no playback, no WAV write).
 
 ## Tooling
 
@@ -150,6 +174,10 @@ just fmt-nix
 just lint
 just test
 just smoke-e2e
+just smoke-llm
+# optional local hook simulation:
+just precommit-run
+just prepush-run
 # or specify a custom asset path (positional args):
 just smoke-e2e /path/to/kokoro-82m /tmp/koko-smoke.wav "Koko local inference smoke test"
 ```
@@ -202,6 +230,9 @@ koko "Installed globally via nix profile"
   - Force CPU mode: `koko --device cpu "hello"`.
 - **No input text provided**
   - Provide message args, `--input-file`, or pipe stdin.
+- **Summarization failed**
+  - Check `--llm-base-url` and `--llm-model` against your local llama.cpp server.
+  - `koko` intentionally aborts synthesis when `--summarize` fails.
 
 ## References
 

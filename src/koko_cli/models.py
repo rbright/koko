@@ -5,6 +5,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
+from .constants import DEFAULT_LLM_BASE_URL, DEFAULT_LLM_MAX_INPUT_CHARS, DEFAULT_LLM_MODEL, DEFAULT_LLM_TIMEOUT_SECONDS
+
 
 class VoicesCommand(BaseModel):
     """Validated inputs for `koko voices`."""
@@ -27,6 +29,12 @@ class SpeakCommand(BaseModel):
     speed: float = Field(gt=0)
     output: Path | None = None
     input_file: str | None = None
+    summarize: bool = False
+    llm_base_url: str = Field(default=DEFAULT_LLM_BASE_URL)
+    llm_model: str = Field(default=DEFAULT_LLM_MODEL)
+    llm_api_key: str = ""
+    llm_timeout_seconds: float = Field(default=DEFAULT_LLM_TIMEOUT_SECONDS, gt=0)
+    llm_max_input_chars: int = Field(default=DEFAULT_LLM_MAX_INPUT_CHARS, ge=256)
     repo_id: str = Field(min_length=1)
     model_dir: Path | None = None
     offline: bool = True
@@ -47,6 +55,13 @@ class SpeakCommand(BaseModel):
     def validate_audio_destination(self) -> SpeakCommand:
         if not self.play and self.output is None:
             raise ValueError("--no-play requires --output so the audio has a destination.")
+
+        if self.summarize:
+            if not self.llm_base_url.strip():
+                raise ValueError("--summarize requires --llm-base-url to be non-blank.")
+            if not self.llm_model.strip():
+                raise ValueError("--summarize requires --llm-model to be non-blank.")
+
         return self
 
 

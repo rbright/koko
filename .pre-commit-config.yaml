@@ -1,41 +1,70 @@
+default_stages: [pre-commit]
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
       - id: trailing-whitespace
+        stages: [pre-commit]
+        exclude: ^AGENTS\.md$
       - id: end-of-file-fixer
+        stages: [pre-commit]
       - id: check-added-large-files
+        stages: [pre-commit]
 
   - repo: local
     hooks:
-      - id: lint-nix
-        name: nix lint
-        entry: just lint-nix
-        language: system
-        pass_filenames: false
-        always_run: true
-
+      # Lightweight checks: run on commit.
       - id: ruff-format
         name: ruff format
         entry: uv run ruff format
         language: system
         types: [python]
+        stages: [pre-commit]
 
       - id: ruff-check
         name: ruff check
         entry: uv run ruff check
         language: system
         types: [python]
+        stages: [pre-commit]
 
       - id: ty-check
         name: ty check
         entry: uv run ty check .
         language: system
         pass_filenames: false
+        stages: [pre-commit]
 
-      - id: pytest
-        name: pytest
-        entry: uv run pytest
+      # Heavier gate: run on push.
+      - id: lint-pre-push
+        name: lint (full)
+        entry: just lint
         language: system
         pass_filenames: false
+        always_run: true
+        stages: [pre-push]
+
+      - id: test-pre-push
+        name: test
+        entry: just test
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
+
+      - id: nix-build-pre-push
+        name: nix build
+        entry: nix build path:.#koko
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
+
+      - id: nix-help-pre-push
+        name: nix run --help
+        entry: nix run path:.#koko -- --help
+        language: system
+        pass_filenames: false
+        always_run: true
         stages: [pre-push]

@@ -46,6 +46,14 @@
             pythonPackages.pydantic-settings
           ];
 
+          # TODO: Remove this once pydantic-ai is packaged in nixpkgs.
+          # `pydantic-ai` is not yet packaged in nixpkgs; remove it from wheel
+          # runtime metadata so Nix package checks stay green while base CLI
+          # remains usable. Summarization path requires pydantic-ai at runtime.
+          pythonRemoveDeps = [
+            "pydantic-ai"
+          ];
+
           pythonImportsCheck = [
             "koko_cli"
           ];

@@ -16,6 +16,7 @@ from .offline import (
     resolve_voice_source,
 )
 from .settings import SettingsSnapshot
+from .summarization import is_local_llm_base_url, summarize_for_speech
 from .synthesis import build_local_model, build_pipeline, pipeline_lang_code, synthesize_waveform
 from .text import resolve_lang_code, resolve_text
 
@@ -58,6 +59,23 @@ def run_speak(command: SpeakCommand, settings: SettingsSnapshot) -> int:
         message_parts=command.message,
         input_file=command.input_file,
     )
+
+    if command.summarize:
+        if command.offline and not is_local_llm_base_url(command.llm_base_url):
+            raise UsageError(
+                "Offline mode with --summarize requires a local --llm-base-url. "
+                "Pass --no-offline to allow remote LLM endpoints."
+            )
+
+        text = summarize_for_speech(
+            text=text,
+            base_url=command.llm_base_url,
+            model=command.llm_model,
+            api_key=command.llm_api_key,
+            timeout_seconds=command.llm_timeout_seconds,
+            max_input_chars=command.llm_max_input_chars,
+        )
+
     lang_code = resolve_lang_code(lang_code=command.lang_code, voice=command.voice)
     device = None if command.device == "auto" else command.device
 
