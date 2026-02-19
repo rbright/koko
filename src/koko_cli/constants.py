@@ -13,6 +13,12 @@ LOCAL_CONFIG_FILE: Final[str] = "config.json"
 LOCAL_MODEL_FILE: Final[str] = "kokoro-v1_0.pth"
 LOCAL_VOICES_DIR: Final[str] = "voices"
 
+DEFAULT_SUMMARIZE: Final[bool] = False
+DEFAULT_LLM_BASE_URL: Final[str] = "http://127.0.0.1:11434/v1"
+DEFAULT_LLM_MODEL: Final[str] = "mistralai_Mistral-Small-3.2-24B-Instruct-2506-Q6_K"
+DEFAULT_LLM_TIMEOUT_SECONDS: Final[float] = 20.0
+DEFAULT_LLM_MAX_INPUT_CHARS: Final[int] = 8_000
+
 SUPPORTED_LANG_CODES: Final[set[str]] = {"a", "b", "e", "f", "h", "i", "j", "p", "z"}
 LANG_ALIASES: Final[dict[str, str]] = {
     "en-us": "a",

@@ -18,6 +18,15 @@ def positive_float(value: str) -> float:
     return parsed
 
 
+def positive_int(value: str) -> int:
+    """argparse validator for positive integer values."""
+
+    parsed = int(value)
+    if parsed <= 0:
+        raise argparse.ArgumentTypeError("value must be > 0")
+    return parsed
+
+
 def resolve_text(message_parts: Sequence[str], input_file: str | None) -> str:
     """Resolve input text from message args, file, or stdin."""
 

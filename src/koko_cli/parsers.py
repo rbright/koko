@@ -9,7 +9,7 @@ from pydantic import ValidationError
 from .errors import UsageError
 from .models import SpeakCommand, VoicesCommand, format_validation_error
 from .settings import SettingsSnapshot
-from .text import positive_float
+from .text import positive_float, positive_int
 
 
 def split_command(argv: Sequence[str]) -> tuple[str, list[str]]:
@@ -88,6 +88,39 @@ def parse_speak_args(argv: Sequence[str], settings: SettingsSnapshot) -> argpars
         type=str,
         default=None,
         help="Read message text from file path, or '-' for stdin.",
+    )
+    parser.add_argument(
+        "--summarize",
+        action=argparse.BooleanOptionalAction,
+        default=settings.summarize,
+        help="Summarize input text into conversational speech before synthesis.",
+    )
+    parser.add_argument(
+        "--llm-base-url",
+        default=settings.llm_base_url,
+        help=f"OpenAI-compatible API base URL (default: {settings.llm_base_url})",
+    )
+    parser.add_argument(
+        "--llm-model",
+        default=settings.llm_model,
+        help=f"LLM model id for summarization (default: {settings.llm_model})",
+    )
+    parser.add_argument(
+        "--llm-api-key",
+        default=settings.llm_api_key,
+        help="Optional API key for the OpenAI-compatible endpoint.",
+    )
+    parser.add_argument(
+        "--llm-timeout-seconds",
+        type=positive_float,
+        default=settings.llm_timeout_seconds,
+        help="LLM request timeout in seconds (>0).",
+    )
+    parser.add_argument(
+        "--llm-max-input-chars",
+        type=positive_int,
+        default=settings.llm_max_input_chars,
+        help="Maximum input characters sent to summarization model (>0).",
     )
     parser.add_argument(
         "--repo-id",

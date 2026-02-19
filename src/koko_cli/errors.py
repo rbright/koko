@@ -11,3 +11,7 @@ class UsageError(KokoError):
 
 class PlaybackError(KokoError):
     """Raised when playback fails."""
+
+
+class SummarizationError(KokoError):
+    """Raised when text summarization fails."""
