@@ -185,6 +185,7 @@ just smoke-e2e /path/to/kokoro-82m /tmp/koko-smoke.wav "Koko local inference smo
 ## NixOS / Nix installation
 
 This repo ships a flake package that exposes a `koko` binary.
+It also vendors a local `pydantic-ai` dependency chain in `flake.nix` so `--summarize` works in Nix-installed builds.
 
 ### Run directly from the repo
 
