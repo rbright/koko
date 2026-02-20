@@ -57,6 +57,7 @@ def player_candidates(path: Path) -> list[list[str]]:
 
     if os_name == "linux":
         return [
+            ["pw-play", target],
             ["ffplay", "-nodisp", "-autoexit", "-loglevel", "error", target],
             ["aplay", target],
             ["paplay", target],
