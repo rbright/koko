@@ -85,7 +85,7 @@ def test_summarize_for_speech_returns_normalized_output(monkeypatch: pytest.Monk
     result = summarization.summarize_for_speech(
         text="raw markdown input",
         base_url="http://127.0.0.1:11434/v1",
-        model="mistralai_Mistral-Small-3.2-24B-Instruct-2506-Q6_K",
+        model="Mistral-7B-Instruct-v0.3-Q6_K",
         api_key="",
         timeout_seconds=5.0,
         max_input_chars=1000,
@@ -126,7 +126,7 @@ def test_summarize_for_speech_raises_when_model_call_fails(monkeypatch: pytest.M
         summarization.summarize_for_speech(
             text="raw markdown input",
             base_url="http://127.0.0.1:11434/v1",
-            model="mistralai_Mistral-Small-3.2-24B-Instruct-2506-Q6_K",
+            model="Mistral-7B-Instruct-v0.3-Q6_K",
             api_key="",
             timeout_seconds=5.0,
             max_input_chars=1000,

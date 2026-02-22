@@ -302,7 +302,7 @@ def test_offline_summarize_requires_local_llm_base_url(
 
 
 @pytest.fixture(autouse=True)
-def clear_koko_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+def clear_koko_environment(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     settings_module.get_settings.cache_clear()
     monkeypatch.delenv("KOKO_MODEL_DIR", raising=False)
     monkeypatch.delenv("KOKO_SUMMARIZE", raising=False)
@@ -311,6 +311,7 @@ def clear_koko_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("KOKO_LLM_API_KEY", raising=False)
     monkeypatch.delenv("KOKO_LLM_TIMEOUT_SECONDS", raising=False)
     monkeypatch.delenv("KOKO_LLM_MAX_INPUT_CHARS", raising=False)
+    monkeypatch.setenv("KOKO_CONFIG_FILE", str(tmp_path / "missing-config.jsonc"))
     monkeypatch.delenv("HF_HUB_OFFLINE", raising=False)
     monkeypatch.delenv("TRANSFORMERS_OFFLINE", raising=False)
 

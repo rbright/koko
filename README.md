@@ -18,12 +18,13 @@ Local CLI text-to-speech using [Kokoro-82M](https://huggingface.co/hexgrad/Kokor
 - WAV output via `--output`
 - Optional playback toggle via `--play/--no-play`
 - Optional `--summarize` pre-vocalization filter (OpenAI-compatible API; local llama.cpp friendly)
+- Optional JSONC config file at `~/.config/koko/config.jsonc` for defaults (including LLM settings)
 
 ## Requirements
 
 - Python `3.13.11`
 - A local audio player for playback (auto-detected):
-  - Linux: `ffplay`, `aplay`, or `paplay`
+  - Linux: `pw-play`, `ffplay`, `aplay`, or `paplay`
   - macOS: `afplay`
 
 `koko` is configured for **local-only execution by default**. It will not make network requests unless you explicitly pass `--no-offline`.
@@ -61,7 +62,7 @@ echo "Deployment completed." | koko
 koko --input-file ./message.txt
 
 # Summarize noisy structured text before speech (local llama.cpp)
-koko --summarize --llm-model mistralai_Mistral-Small-3.2-24B-Instruct-2506-Q6_K "### Build\n- ✅ tests pass\n- changed 14 files"
+koko --summarize --llm-model Mistral-7B-Instruct-v0.3-Q6_K "### Build\n- ✅ tests pass\n- changed 14 files"
 
 # List voices
 koko voices
@@ -121,7 +122,7 @@ koko "Task complete"
 - `--play/--no-play` — enable or disable local playback
 - `--summarize/--no-summarize` — summarize input text before TTS (default: off)
 - `--llm-base-url` — OpenAI-compatible API URL (default: `http://127.0.0.1:11434/v1`)
-- `--llm-model` — summarization model id (default: `mistralai_Mistral-Small-3.2-24B-Instruct-2506-Q6_K`)
+- `--llm-model` — summarization model id (default: `Mistral-7B-Instruct-v0.3-Q6_K`)
 - `--llm-api-key` — optional API key for summarization endpoint
 - `--llm-timeout-seconds` — summarization request timeout (`> 0`)
 - `--llm-max-input-chars` — maximum input size sent to LLM (`>= 256`)
@@ -143,8 +144,39 @@ You can set defaults with `KOKO_*` environment variables:
 - `KOKO_LLM_API_KEY`
 - `KOKO_LLM_TIMEOUT_SECONDS`
 - `KOKO_LLM_MAX_INPUT_CHARS`
+- `KOKO_CONFIG_FILE` (optional override for config file path)
 
 CLI flags still take precedence over environment defaults.
+
+### Configuration file (`~/.config/koko/config.jsonc`)
+
+`koko` also reads optional JSONC defaults from `~/.config/koko/config.jsonc`.
+This makes it easy to manage `koko` settings declaratively from NixOS/Home Manager dotfiles.
+
+- Supports `//` and `/* ... */` comments.
+- Supports trailing commas.
+- Use `KOKO_CONFIG_FILE` to point at a different path.
+
+Example:
+
+```jsonc
+{
+  // Keep summarize on by default
+  "summarize": true,
+
+  // Top-level keys map to settings fields
+  "llm_model": "Mistral-7B-Instruct-v0.3-Q6_K",
+  "llm_base_url": "http://127.0.0.1:11434/v1",
+
+  // Optional nested section also works
+  "llm": {
+    "timeout_seconds": 15,
+    "max_input_chars": 6000
+  }
+}
+```
+
+Effective precedence is: **CLI flags > environment variables > config file > built-in defaults**.
 
 When `--summarize` is enabled and summarization fails, `koko` logs an error and exits without generating or playing audio.
 
@@ -222,7 +254,7 @@ koko "Installed globally via nix profile"
 ## Troubleshooting
 
 - **No audio player found**
-  - Install one of: `ffplay`, `aplay`, `paplay`, or use `--no-play --output file.wav`.
+  - Install one of: `pw-play`, `ffplay`, `aplay`, `paplay`, or use `--no-play --output file.wav`.
 - **Offline mode fails with missing assets**
   - Ensure `--model-dir` (or `KOKO_MODEL_DIR`) contains `config.json`, `kokoro-v1_0.pth`, and `voices/*.pt`.
 - **You still see Hugging Face requests/warnings**

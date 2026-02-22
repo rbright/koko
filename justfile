@@ -67,5 +67,5 @@ smoke-e2e model_dir="~/.local/share/koko/kokoro-82m" output="/tmp/koko-smoke.wav
     uv run koko --model-dir '{{ model_dir }}' --no-play --output '{{ output }}' "{{ text }}"
 
 # Smoke test with LLM summarization enabled (local OpenAI-compatible endpoint).
-smoke-llm model_dir="~/.local/share/koko/kokoro-82m" llm_base_url="http://127.0.0.1:11434/v1" llm_model="mistralai_Mistral-Small-3.2-24B-Instruct-2506-Q6_K" output="/tmp/koko-llm-smoke.wav" text="### Build\n- tests passed\n- changed 14 files":
+smoke-llm model_dir="~/.local/share/koko/kokoro-82m" llm_base_url="http://127.0.0.1:11434/v1" llm_model="Mistral-7B-Instruct-v0.3-Q6_K" output="/tmp/koko-llm-smoke.wav" text="### Build\n- tests passed\n- changed 14 files":
     uv run koko --model-dir '{{ model_dir }}' --summarize --llm-base-url '{{ llm_base_url }}' --llm-model '{{ llm_model }}' --no-play --output '{{ output }}' "{{ text }}"
