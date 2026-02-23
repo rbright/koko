@@ -10,7 +10,7 @@ def test_load_summary_instructions_comes_from_prompt_file() -> None:
     instructions = summarization.load_summary_instructions()
 
     assert "arbitrary text" in instructions
-    assert "hard maximum of 4 sentences" in instructions
+    assert "hard maximum of 1 sentence" in instructions
     assert "technical assistant output" not in instructions
 
 
@@ -73,7 +73,7 @@ def test_normalize_summary_output_drops_meta_only_sentences() -> None:
 def test_normalize_summary_output_caps_sentence_count() -> None:
     raw = "One. Two! Three? Four. Five."
 
-    assert summarization.normalize_summary_output(raw) == "One. Two! Three? Four."
+    assert summarization.normalize_summary_output(raw) == "One."
 
 
 def test_summarize_for_speech_returns_normalized_output(monkeypatch: pytest.MonkeyPatch) -> None:
