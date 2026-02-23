@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 from functools import lru_cache
 from importlib.resources import files
 from typing import Any
@@ -9,6 +8,8 @@ from urllib.parse import urlparse
 from .errors import SummarizationError
 
 SUMMARY_PROMPT_RESOURCE = "prompts/summarize_for_speech.txt"
+MAX_SUMMARY_SENTENCES = 1
+SENTENCE_ENDINGS: set[str] = {".", "!", "?"}
 
 
 @lru_cache(maxsize=1)
@@ -101,15 +102,106 @@ def normalize_summary_output(output: str) -> str:
 
     normalized_lines: list[str] = []
     for line in cleaned.splitlines():
-        candidate = line.strip()
-        if not candidate:
+        candidate = normalize_line_for_speech(line)
+        if candidate:
+            normalized_lines.append(candidate)
+
+    normalized = collapse_spaces(" ".join(normalized_lines))
+    if not normalized:
+        return ""
+
+    return clamp_summary_sentences(normalized, max_sentences=MAX_SUMMARY_SENTENCES)
+
+
+def normalize_line_for_speech(line: str) -> str:
+    """Normalize one output line for spoken text."""
+
+    candidate = strip_leading_markdown_markers(line.strip())
+    return collapse_spaces(candidate)
+
+
+def strip_leading_markdown_markers(text: str) -> str:
+    """Remove leading markdown list/header markers from a line."""
+
+    candidate = text
+    while candidate:
+        previous = candidate
+
+        if candidate.startswith(("#", "-", "*")):
+            candidate = candidate[1:].lstrip(" \t")
+        else:
+            marker_length = leading_ordered_list_marker_length(candidate)
+            if marker_length > 0:
+                candidate = candidate[marker_length:].lstrip(" \t")
+
+        if candidate == previous:
+            break
+
+    return candidate.strip()
+
+
+def leading_ordered_list_marker_length(text: str) -> int:
+    """Return marker width for ordered-list prefixes like `1.` or `2)`."""
+
+    index = 0
+    while index < len(text) and text[index].isdigit():
+        index += 1
+
+    if index == 0 or index >= len(text):
+        return 0
+
+    if text[index] not in {".", ")"}:
+        return 0
+
+    return index + 1
+
+
+def collapse_spaces(text: str) -> str:
+    """Collapse repeated whitespace runs into single spaces."""
+
+    return " ".join(text.split())
+
+
+def clamp_summary_sentences(text: str, *, max_sentences: int) -> str:
+    """Limit summary output to a maximum number of sentence-like chunks."""
+
+    if max_sentences <= 0:
+        return ""
+
+    sentences = split_sentences(text)
+    if not sentences:
+        return ""
+
+    return " ".join(sentences[:max_sentences]).strip()
+
+
+def split_sentences(text: str) -> list[str]:
+    """Split text into sentence-like chunks using terminal punctuation."""
+
+    normalized = text.strip()
+    if not normalized:
+        return []
+
+    sentences: list[str] = []
+    start = 0
+
+    for index, char in enumerate(normalized):
+        if char not in SENTENCE_ENDINGS:
             continue
 
-        candidate = re.sub(r"^\s*[-*#]+\s*", "", candidate)
-        candidate = re.sub(r"^\s*\d+[.)]\s*", "", candidate)
-        normalized_lines.append(candidate)
+        sentence = normalized[start : index + 1].strip()
+        if sentence:
+            sentences.append(sentence)
 
-    return " ".join(normalized_lines).strip()
+        start = index + 1
+        while start < len(normalized) and normalized[start].isspace():
+            start += 1
+
+    trailing = normalized[start:].strip()
+    if trailing:
+        sentences.append(trailing)
+
+    return sentences
 
 
 def is_local_llm_base_url(base_url: str) -> bool:

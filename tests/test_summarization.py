@@ -10,6 +10,7 @@ def test_load_summary_instructions_comes_from_prompt_file() -> None:
     instructions = summarization.load_summary_instructions()
 
     assert "arbitrary text" in instructions
+    assert "hard maximum of 1 sentence" in instructions
     assert "technical assistant output" not in instructions
 
 
@@ -49,6 +50,24 @@ def test_normalize_summary_output_strips_markdown_artifacts() -> None:
     raw = "# Done\n- Updated CI smoke path\n1. Added badge"
 
     assert summarization.normalize_summary_output(raw) == "Done Updated CI smoke path Added badge"
+
+
+def test_normalize_summary_output_preserves_model_wording() -> None:
+    raw = "Here's a quick summary in conversational form: Build passed and deploy started."
+
+    assert summarization.normalize_summary_output(raw) == raw
+
+
+def test_normalize_summary_output_collapses_whitespace() -> None:
+    raw = "  Build    passed     successfully.   "
+
+    assert summarization.normalize_summary_output(raw) == "Build passed successfully."
+
+
+def test_normalize_summary_output_caps_sentence_count() -> None:
+    raw = "One. Two! Three? Four. Five."
+
+    assert summarization.normalize_summary_output(raw) == "One."
 
 
 def test_summarize_for_speech_returns_normalized_output(monkeypatch: pytest.MonkeyPatch) -> None:
