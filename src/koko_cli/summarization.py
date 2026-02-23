@@ -9,6 +9,38 @@ from urllib.parse import urlparse
 from .errors import SummarizationError
 
 SUMMARY_PROMPT_RESOURCE = "prompts/summarize_for_speech.txt"
+MAX_SUMMARY_SENTENCES = 4
+SENTENCE_SPLIT_PATTERN = re.compile(r"(?<=[.!?])\s+")
+SUMMARY_META_PREFIX_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(r"(?is)^\s*(?:summary|recap)\s*[:\-–]\s*"),
+    re.compile(
+        r"(?is)^\s*(?:here(?:'s| is)|this is|the following is)\s+"
+        r"(?:a\s+)?(?:brief|quick|short|concise)?\s*(?:summary|recap)"
+        r"(?:\s+(?:in|as)\s+(?:a\s+)?(?:more\s+)?conversational(?:\s+form)?)?\s*[:\-–]\s*"
+    ),
+    re.compile(r"(?is)^\s*(?:in summary|to summarize)\s*,\s*"),
+    re.compile(
+        r"(?is)^\s*(?:i\s+(?:have|'ve)\s+)?(?:rewritten|translated|converted|summarized)\s+"
+        r"(?:the\s+)?(?:text|input|message)\s+(?:into|to)\s+(?:a\s+)?(?:more\s+)?"
+        r"conversational(?:\s+form|\s+tone)?\s*[:\-–]\s*"
+    ),
+)
+SUMMARY_META_SENTENCE_EXACT: set[str] = {
+    "summary",
+    "recap",
+    "in summary",
+    "to summarize",
+    "here's a summary",
+    "here is a summary",
+    "here's a quick summary",
+    "here is a quick summary",
+    "here's a concise summary",
+    "here is a concise summary",
+    "this is a summary",
+    "the following is a summary",
+    "here's a summary in conversational form",
+    "here is a summary in conversational form",
+}
 
 
 @lru_cache(maxsize=1)
@@ -109,7 +141,75 @@ def normalize_summary_output(output: str) -> str:
         candidate = re.sub(r"^\s*\d+[.)]\s*", "", candidate)
         normalized_lines.append(candidate)
 
-    return " ".join(normalized_lines).strip()
+    normalized = " ".join(normalized_lines).strip()
+    if not normalized:
+        return ""
+
+    normalized = strip_summary_meta_prefixes(normalized)
+    normalized = strip_summary_meta_sentences(normalized)
+    normalized = clamp_summary_sentences(normalized, max_sentences=MAX_SUMMARY_SENTENCES)
+    return normalized.strip()
+
+
+def strip_summary_meta_prefixes(text: str) -> str:
+    """Remove leading summary meta-commentary before returning spoken text."""
+
+    normalized = text.strip()
+    for pattern in SUMMARY_META_PREFIX_PATTERNS:
+        normalized = pattern.sub("", normalized, count=1).strip()
+    return normalized
+
+
+def strip_summary_meta_sentences(text: str) -> str:
+    """Drop sentence fragments that only describe the act of summarizing."""
+
+    sentences = split_sentences(text)
+    if not sentences:
+        return text.strip()
+
+    filtered_sentences = [sentence for sentence in sentences if not is_summary_meta_sentence(sentence)]
+    if not filtered_sentences:
+        return " ".join(sentences).strip()
+
+    return " ".join(filtered_sentences).strip()
+
+
+def is_summary_meta_sentence(sentence: str) -> bool:
+    """Return True when sentence content is summarization meta-commentary only."""
+
+    normalized = re.sub(r"\s+", " ", sentence.strip().lower())
+    normalized = normalized.strip(" \t\r\n:;,.!?-–—")
+    if not normalized:
+        return False
+
+    if normalized in SUMMARY_META_SENTENCE_EXACT:
+        return True
+
+    if normalized.startswith(("i have summarized", "i've summarized", "i have rewritten", "i've rewritten")):
+        return True
+
+    if normalized.startswith(("i have translated", "i've translated", "i have converted", "i've converted")):
+        return True
+
+    return "conversational form" in normalized and any(
+        token in normalized for token in ("summary", "summarized", "rewritten", "translated", "converted")
+    )
+
+
+def clamp_summary_sentences(text: str, *, max_sentences: int) -> str:
+    """Limit summary output to a maximum number of sentence-like chunks."""
+
+    sentences = split_sentences(text)
+    if not sentences:
+        return text.strip()
+
+    return " ".join(sentences[:max_sentences]).strip()
+
+
+def split_sentences(text: str) -> list[str]:
+    """Split text into sentence-like chunks for post-processing."""
+
+    return [part.strip() for part in SENTENCE_SPLIT_PATTERN.split(text.strip()) if part.strip()]
 
 
 def is_local_llm_base_url(base_url: str) -> bool:
