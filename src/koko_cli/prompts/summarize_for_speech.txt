@@ -9,8 +9,8 @@ Return plain conversational text only:
 - never include labels such as "Summary:" or preambles like "Here's a summary"
 
 Output constraints:
-- prefer 2 to 3 short sentences
-- hard maximum of 4 sentences
+- return exactly 1 short sentence
+- hard maximum of 1 sentence
 - preserve key meaning and status
 - include one most relevant next action only when useful
 - avoid adding facts not present in the input

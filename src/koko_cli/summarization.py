@@ -9,7 +9,7 @@ from urllib.parse import urlparse
 from .errors import SummarizationError
 
 SUMMARY_PROMPT_RESOURCE = "prompts/summarize_for_speech.txt"
-MAX_SUMMARY_SENTENCES = 4
+MAX_SUMMARY_SENTENCES = 1
 SENTENCE_SPLIT_PATTERN = re.compile(r"(?<=[.!?])\s+")
 SUMMARY_META_PREFIX_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"(?is)^\s*(?:summary|recap)(?:\s*[:\-–]\s*|\s+)"),
