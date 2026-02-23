@@ -12,17 +12,18 @@ SUMMARY_PROMPT_RESOURCE = "prompts/summarize_for_speech.txt"
 MAX_SUMMARY_SENTENCES = 4
 SENTENCE_SPLIT_PATTERN = re.compile(r"(?<=[.!?])\s+")
 SUMMARY_META_PREFIX_PATTERNS: tuple[re.Pattern[str], ...] = (
-    re.compile(r"(?is)^\s*(?:summary|recap)\s*[:\-–]\s*"),
+    re.compile(r"(?is)^\s*(?:summary|recap)(?:\s*[:\-–]\s*|\s+)"),
     re.compile(
         r"(?is)^\s*(?:here(?:'s| is)|this is|the following is)\s+"
         r"(?:a\s+)?(?:brief|quick|short|concise)?\s*(?:summary|recap)"
-        r"(?:\s+(?:in|as)\s+(?:a\s+)?(?:more\s+)?conversational(?:\s+form)?)?\s*[:\-–]\s*"
+        r"(?:\s+(?:in|as)\s+(?:a\s+)?(?:more\s+)?conversational(?:\s+form)?)?"
+        r"(?:\s*[:\-–]\s*|\s+)"
     ),
-    re.compile(r"(?is)^\s*(?:in summary|to summarize)\s*,\s*"),
+    re.compile(r"(?is)^\s*(?:in summary|to summarize)(?:\s*[,:\-–]\s*|\s+)"),
     re.compile(
         r"(?is)^\s*(?:i\s+(?:have|'ve)\s+)?(?:rewritten|translated|converted|summarized)\s+"
         r"(?:the\s+)?(?:text|input|message)\s+(?:into|to)\s+(?:a\s+)?(?:more\s+)?"
-        r"conversational(?:\s+form|\s+tone)?\s*[:\-–]\s*"
+        r"conversational(?:\s+form|\s+tone)?(?:\s*[:\-–]\s*|\s+)"
     ),
 )
 SUMMARY_META_SENTENCE_EXACT: set[str] = {
@@ -41,6 +42,21 @@ SUMMARY_META_SENTENCE_EXACT: set[str] = {
     "here's a summary in conversational form",
     "here is a summary in conversational form",
 }
+SUMMARY_META_SENTENCE_PATTERNS: tuple[re.Pattern[str], ...] = (
+    re.compile(
+        r"(?is)^(?:here(?:'s| is)|this is|the following is)\s+"
+        r"(?:a\s+)?(?:brief|quick|short|concise)?\s*(?:summary|recap)"
+        r"(?:\s+(?:in|as)\s+(?:a\s+)?(?:more\s+)?conversational(?:\s+form)?)?"
+        r"\s*[:;,\-.!?–—]*\s*$"
+    ),
+    re.compile(r"(?is)^(?:summary|recap|in summary|to summarize)\s*[:;,\-.!?–—]*\s*$"),
+    re.compile(
+        r"(?is)^(?:i\s+(?:have|'ve)\s+)?(?:rewritten|translated|converted|summarized)\s+"
+        r"(?:the\s+)?(?:text|input|message)"
+        r"(?:\s+(?:into|to)\s+(?:a\s+)?(?:more\s+)?conversational(?:\s+form|\s+tone)?)?"
+        r"\s*[:;,\-.!?–—]*\s*$"
+    ),
+)
 
 
 @lru_cache(maxsize=1)
@@ -169,7 +185,7 @@ def strip_summary_meta_sentences(text: str) -> str:
 
     filtered_sentences = [sentence for sentence in sentences if not is_summary_meta_sentence(sentence)]
     if not filtered_sentences:
-        return " ".join(sentences).strip()
+        return ""
 
     return " ".join(filtered_sentences).strip()
 
@@ -185,15 +201,7 @@ def is_summary_meta_sentence(sentence: str) -> bool:
     if normalized in SUMMARY_META_SENTENCE_EXACT:
         return True
 
-    if normalized.startswith(("i have summarized", "i've summarized", "i have rewritten", "i've rewritten")):
-        return True
-
-    if normalized.startswith(("i have translated", "i've translated", "i have converted", "i've converted")):
-        return True
-
-    return "conversational form" in normalized and any(
-        token in normalized for token in ("summary", "summarized", "rewritten", "translated", "converted")
-    )
+    return any(pattern.fullmatch(normalized) is not None for pattern in SUMMARY_META_SENTENCE_PATTERNS)
 
 
 def clamp_summary_sentences(text: str, *, max_sentences: int) -> str:
