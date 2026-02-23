@@ -11,52 +11,48 @@ from .errors import SummarizationError
 SUMMARY_PROMPT_RESOURCE = "prompts/summarize_for_speech.txt"
 MAX_SUMMARY_SENTENCES = 1
 SENTENCE_SPLIT_PATTERN = re.compile(r"(?<=[.!?])\s+")
-SUMMARY_META_PREFIX_PATTERNS: tuple[re.Pattern[str], ...] = (
-    re.compile(r"(?is)^\s*(?:summary|recap)(?:\s*[:\-–]\s*|\s+)"),
-    re.compile(
-        r"(?is)^\s*(?:here(?:'s| is)|this is|the following is)\s+"
-        r"(?:a\s+)?(?:brief|quick|short|concise)?\s*(?:summary|recap)"
-        r"(?:\s+(?:in|as)\s+(?:a\s+)?(?:more\s+)?conversational(?:\s+form)?)?"
-        r"(?:\s*[:\-–]\s*|\s+)"
-    ),
-    re.compile(r"(?is)^\s*(?:in summary|to summarize)(?:\s*[,:\-–]\s*|\s+)"),
-    re.compile(
-        r"(?is)^\s*(?:i\s+(?:have|'ve)\s+)?(?:rewritten|translated|converted|summarized)\s+"
-        r"(?:the\s+)?(?:text|input|message)\s+(?:into|to)\s+(?:a\s+)?(?:more\s+)?"
-        r"conversational(?:\s+form|\s+tone)?(?:\s*[:\-–]\s*|\s+)"
-    ),
-)
-SUMMARY_META_SENTENCE_EXACT: set[str] = {
-    "summary",
-    "recap",
-    "in summary",
-    "to summarize",
-    "here's a summary",
-    "here is a summary",
-    "here's a quick summary",
-    "here is a quick summary",
-    "here's a concise summary",
-    "here is a concise summary",
-    "this is a summary",
-    "the following is a summary",
-    "here's a summary in conversational form",
-    "here is a summary in conversational form",
+WORD_PATTERN = re.compile(r"[a-z']+")
+PREFIX_DELIMITERS: tuple[str, ...] = (":", " - ", " \u2013 ", " \u2014 ")
+META_FILLER_WORDS: set[str] = {
+    "a",
+    "an",
+    "the",
+    "this",
+    "that",
+    "is",
+    "are",
+    "was",
+    "were",
+    "be",
+    "been",
+    "being",
+    "here",
+    "heres",
+    "in",
+    "as",
+    "to",
+    "of",
+    "for",
+    "and",
+    "or",
+    "only",
+    "just",
+    "quick",
+    "brief",
+    "short",
+    "concise",
+    "more",
+    "form",
+    "tone",
+    "text",
+    "input",
+    "message",
+    "into",
+    "following",
+    "i",
+    "ive",
+    "have",
 }
-SUMMARY_META_SENTENCE_PATTERNS: tuple[re.Pattern[str], ...] = (
-    re.compile(
-        r"(?is)^(?:here(?:'s| is)|this is|the following is)\s+"
-        r"(?:a\s+)?(?:brief|quick|short|concise)?\s*(?:summary|recap)"
-        r"(?:\s+(?:in|as)\s+(?:a\s+)?(?:more\s+)?conversational(?:\s+form)?)?"
-        r"\s*[:;,\-.!?–—]*\s*$"
-    ),
-    re.compile(r"(?is)^(?:summary|recap|in summary|to summarize)\s*[:;,\-.!?–—]*\s*$"),
-    re.compile(
-        r"(?is)^(?:i\s+(?:have|'ve)\s+)?(?:rewritten|translated|converted|summarized)\s+"
-        r"(?:the\s+)?(?:text|input|message)"
-        r"(?:\s+(?:into|to)\s+(?:a\s+)?(?:more\s+)?conversational(?:\s+form|\s+tone)?)?"
-        r"\s*[:;,\-.!?–—]*\s*$"
-    ),
-)
 
 
 @lru_cache(maxsize=1)
@@ -171,9 +167,50 @@ def strip_summary_meta_prefixes(text: str) -> str:
     """Remove leading summary meta-commentary before returning spoken text."""
 
     normalized = text.strip()
-    for pattern in SUMMARY_META_PREFIX_PATTERNS:
-        normalized = pattern.sub("", normalized, count=1).strip()
-    return normalized
+    if not normalized:
+        return ""
+
+    for delimiter in PREFIX_DELIMITERS:
+        head, separator, tail = normalized.partition(delimiter)
+        if not separator:
+            continue
+        if is_summary_meta_sentence(head):
+            candidate = tail.strip()
+            if candidate:
+                normalized = candidate
+            break
+
+    return trim_leading_meta_words(normalized)
+
+
+def trim_leading_meta_words(text: str) -> str:
+    """Trim meta-heavy leading words from a single sentence-like chunk."""
+
+    tokens = text.split()
+    if not tokens:
+        return ""
+
+    remove_until = 0
+    saw_meta_core = False
+    for index, token in enumerate(tokens):
+        normalized = token.strip(" \t\r\n:;,.!?-\u2013\u2014").lower().replace("'", "")
+        if not normalized:
+            remove_until = index + 1
+            continue
+
+        if not is_meta_or_filler_word(normalized):
+            break
+
+        if is_meta_core_word(normalized):
+            saw_meta_core = True
+        remove_until = index + 1
+
+    if saw_meta_core and remove_until >= 2 and remove_until < len(tokens):
+        trimmed = " ".join(tokens[remove_until:]).lstrip(" \t\r\n:;,.!?-\u2013\u2014")
+        if trimmed:
+            return trimmed
+
+    return text.strip()
 
 
 def strip_summary_meta_sentences(text: str) -> str:
@@ -181,7 +218,7 @@ def strip_summary_meta_sentences(text: str) -> str:
 
     sentences = split_sentences(text)
     if not sentences:
-        return text.strip()
+        return ""
 
     filtered_sentences = [sentence for sentence in sentences if not is_summary_meta_sentence(sentence)]
     if not filtered_sentences:
@@ -193,15 +230,35 @@ def strip_summary_meta_sentences(text: str) -> str:
 def is_summary_meta_sentence(sentence: str) -> bool:
     """Return True when sentence content is summarization meta-commentary only."""
 
-    normalized = re.sub(r"\s+", " ", sentence.strip().lower())
-    normalized = normalized.strip(" \t\r\n:;,.!?-–—")
-    if not normalized:
+    words = tokenize_words(sentence)
+    if not words:
         return False
 
-    if normalized in SUMMARY_META_SENTENCE_EXACT:
-        return True
+    if not any(is_meta_core_word(word) for word in words):
+        return False
 
-    return any(pattern.fullmatch(normalized) is not None for pattern in SUMMARY_META_SENTENCE_PATTERNS)
+    informative_word_count = sum(1 for word in words if not is_meta_or_filler_word(word))
+    return informative_word_count <= 1
+
+
+def tokenize_words(text: str) -> list[str]:
+    """Extract normalized word tokens for lightweight heuristics."""
+
+    return [word.replace("'", "") for word in WORD_PATTERN.findall(text.lower())]
+
+
+def is_meta_core_word(word: str) -> bool:
+    """Return True for words that directly indicate summary meta-commentary."""
+
+    return word in {"summary", "recap", "conversational"} or word.startswith(
+        ("summariz", "rewrit", "translat", "convert")
+    )
+
+
+def is_meta_or_filler_word(word: str) -> bool:
+    """Return True for words treated as non-content in meta detection."""
+
+    return is_meta_core_word(word) or word in META_FILLER_WORDS
 
 
 def clamp_summary_sentences(text: str, *, max_sentences: int) -> str:
