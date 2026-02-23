@@ -184,7 +184,7 @@ When `--summarize` is enabled and summarization fails, `koko` logs an error and 
 
 - `--summarize` runs **before** Kokoro synthesis.
 - In offline mode, summarization requires a **local** `--llm-base-url` (for example `http://127.0.0.1:11434/v1`).
-- Prompting targets short spoken summaries (prefer 2–3 sentences, hard max 4).
+- Prompting targets a single short spoken summary sentence (hard max 1).
 - `koko` strips meta preambles such as `"Summary:"` / `"Here's a summary..."` before speaking.
 - If summarization fails, `koko` exits non-zero and does not produce audio (no playback, no WAV write).
 
